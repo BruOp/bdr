@@ -29,9 +29,6 @@
     <ClInclude Include="..\include\app.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
