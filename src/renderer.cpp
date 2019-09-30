@@ -121,10 +121,11 @@ namespace bdr
                 ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
                 m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
                 rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+                ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
             }
         }
 
-        ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
     }
 
 
@@ -192,7 +193,7 @@ namespace bdr
             D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
             {
                 { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
             };
 
             // Pipeline State Object
@@ -218,7 +219,7 @@ namespace bdr
         ThrowIfFailed(m_device->CreateCommandList(
             0,
             D3D12_COMMAND_LIST_TYPE_DIRECT,
-            m_commandAllocator.Get(),
+            m_commandAllocators[m_frameIndex].Get(),
             m_pipelineState.Get(),
             IID_PPV_ARGS(&m_commandList)
         ));
@@ -231,8 +232,8 @@ namespace bdr
         {
             Vertex triangleVerts[] = {
                 { { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 0xFF0000FF } },
-                { { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0x00FF00FF } },
-                { { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0x0000FFFF } },
+                { { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0xFF00FF00 } },
+                { { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0xFFFF0000 } },
             };
 
             const UINT vertexBufferSize = sizeof(triangleVerts);
@@ -266,17 +267,18 @@ namespace bdr
 
         // Create fence for frame synchronization
         {
-            ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-            m_fenceValue = 1;
+            ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+            m_fenceValues[m_frameIndex]++;
 
             m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
             if (m_fenceEvent == nullptr) {
                 ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
             }
 
-            // Wait for our setup to complete before continuing
-            waitForPreviousFrame();
         }
+
+        // Wait for our setup to complete before continuing
+        waitForGPU();
     }
 
     void Renderer::onRender()
@@ -292,7 +294,7 @@ namespace bdr
         // TODO: Look up syncInterval parameter here
         ThrowIfFailed(m_swapChain->Present(1, 0));
 
-        waitForPreviousFrame();
+        moveToNextFrame();
     }
 
     void Renderer::populateCommandList()
@@ -300,12 +302,12 @@ namespace bdr
         // Command list allocators can only be reset when the associated 
         // command lists have finished execution on the GPU; apps should use 
         // fences to determine GPU execution progress.
-        ThrowIfFailed(m_commandAllocator->Reset());
+        ThrowIfFailed(m_commandAllocators[m_frameIndex]->Reset());
 
         // However, when ExecuteCommandList() is called on a particular command 
         // list, that command list can then be reset at any time and must be before 
         // re-recording.
-        ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+        ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get()));
 
         // Set necessary state.
         m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
@@ -332,20 +334,34 @@ namespace bdr
 
     }
 
-    void Renderer::waitForPreviousFrame()
+    void Renderer::waitForGPU()
     {
-        const uint64_t fence = m_fenceValue;
-        ThrowIfFailed(m_graphicsQueue->Signal(m_fence.Get(), fence));
-        ++m_fenceValue;
+        const uint64_t fenceValue = m_fenceValues[m_frameIndex];
+        ThrowIfFailed(m_graphicsQueue->Signal(m_fence.Get(), fenceValue));
 
-        if (m_fence->GetCompletedValue() < fence) {
-            ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-            WaitForSingleObject(m_fenceEvent, INFINITE);
-        }
+        ThrowIfFailed(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
+        WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 
-        m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+        m_fenceValues[m_frameIndex]++;
     }
 
+    void Renderer::moveToNextFrame()
+    {
+        const uint64_t fenceValue = m_fenceValues[m_frameIndex];
+        ThrowIfFailed(m_graphicsQueue->Signal(m_fence.Get(), fenceValue));
+
+        // Update the frame index.
+        m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+        // If the next frame is not ready to be rendered yet, wait until it is ready.
+        if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex]) {
+            ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
+            WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+        }
+
+        // Set the fence value for the next frame.
+        m_fenceValues[m_frameIndex] = fenceValue + 1;
+    }
 
     _Use_decl_annotations_
         void Renderer::getHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
