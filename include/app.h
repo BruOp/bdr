@@ -16,6 +16,11 @@ namespace bdr
 
         void run(HINSTANCE hInstance);
 
+        void update();
+        void render();
+
+        void onKeyDown(uint8_t key);
+
         RenderConfig m_renderConfig;
         Renderer m_renderer;
 
