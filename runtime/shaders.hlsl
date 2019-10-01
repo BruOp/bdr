@@ -13,13 +13,24 @@ struct PSInput
 {
     float4 position : SV_POSITION;
     float4 color : COLOR;
+    float3 worldPos : TEXCOORD1;
 };
 
-PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
+struct MVPTransforms
+{
+    matrix model;
+    matrix view;
+    matrix projection;
+    matrix viewProjection;
+};
+
+ConstantBuffer<MVPTransforms> MVP_CB : register(b0);
+
+PSInput VSMain(float3 position : POSITION, float4 color : COLOR)
 {
     PSInput result;
-
-    result.position = position;
+    result.worldPos = mul(MVP_CB.model, float4(position, 1.0f)).xyz;
+    result.position = mul(MVP_CB.viewProjection, float4(result.worldPos, 1.0f));
     result.color = color;
 
     return result;

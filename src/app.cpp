@@ -23,6 +23,7 @@ namespace bdr
 
     void App::update()
     {
+        m_renderer.onUpdate();
     }
 
     void App::render()
@@ -32,7 +33,7 @@ namespace bdr
 
     void App::onKeyDown(uint8_t key)
     {
-        std::wstring keyCode = L"Key pressed! " + std::to_wstring(key) + L"\n";
+        std::wstring keyCode = L"Key pressed! Honk! " + std::to_wstring(key) + L"\n";
         OutputDebugString(keyCode.c_str());
     }
 
@@ -65,6 +66,18 @@ namespace bdr
             if (app) {
                 app->update();
                 app->render();
+            }
+            return 0;
+
+        case WM_SIZE:
+            if (app) {
+                RECT clientRect = {};
+                GetClientRect(app->m_hwnd, &clientRect);
+                UINT16_MAX;
+                uint16_t width = static_cast<uint16_t>(clientRect.right) - static_cast<uint16_t>(clientRect.left);
+                uint16_t height = static_cast<uint16_t>(clientRect.bottom) - static_cast<uint16_t>(clientRect.top);
+
+                app->m_renderer.onResize(width, height);
             }
             return 0;
 

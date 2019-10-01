@@ -1,4 +1,3 @@
-#include <iostream>
 #include <cstdlib>
 
 #include "stdafx.h"
@@ -19,7 +18,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         app.run(hInstance);
     }
     catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        std::string cs(e.what());
+        std::wstring ws;
+        std::copy(cs.begin(), cs.end(), back_inserter(ws));
+        OutputDebugString(ws.c_str());
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
