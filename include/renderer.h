@@ -127,9 +127,9 @@ namespace bdr
         ComPtr<ID3D12GraphicsCommandList> m_commandList;
         ComPtr<IDXGISwapChain3> m_swapChain;
         ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+        ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
         ComPtr<ID3D12Resource> m_renderTargets[FRAME_COUNT];
-        ComPtr<ID3D12Resource> m_depthVuffer;
-        ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
+        ComPtr<ID3D12Resource> m_depthBuffers[FRAME_COUNT];
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pipelineState;
 
