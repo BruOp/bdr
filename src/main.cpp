@@ -3,8 +3,9 @@
 #include "stdafx.h"
 #include "app.h"
 
-_Use_decl_annotations_
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
+//_Use_decl_annotations_
+//int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
+int wmain(/*int argc, wchar_t** argv*/)
 {
     bdr::RenderConfig config{
         1280,
@@ -15,7 +16,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     bdr::App app{ config };
 
     try {
-        app.run(hInstance);
+        app.run();
     }
     catch (const std::exception& e) {
         std::string cs(e.what());

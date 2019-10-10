@@ -2,9 +2,14 @@
 
 namespace bdr
 {
-    void App::run(HINSTANCE hInstance)
+    void App::run()
     {
         OutputDebugString(L"Starting App!\n");
+        
+        Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
+        ASSERT_SUCCEEDED(InitializeWinRT);
+
+        HINSTANCE hInstance = GetModuleHandle(0);
 
         initWindow(hInstance);
         m_renderer.init(m_hwnd);

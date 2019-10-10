@@ -2,6 +2,11 @@
 #include <cstdint>
 #include "stdafx.h"
 
+#include "CommandQueue.h"
+#include "GPUResource.h"
+#include "GPUBuffer.h"
+
+
 using Microsoft::WRL::ComPtr;
 
 namespace bdr
@@ -52,15 +57,28 @@ namespace bdr
 
     struct Mesh
     {
-        ComPtr<ID3D12Resource> vertexBuffer;
-        ComPtr<ID3D12Resource> indexBuffer;
+        GPUBuffer vertexBuffer;
+        GPUBuffer indexBuffer;
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW indexBufferView;
+        
+        inline void destroy()
+        {
+            vertexBuffer.destroy();
+            indexBuffer.destroy();
+            vertexBufferView = D3D12_VERTEX_BUFFER_VIEW{};
+            indexBufferView = D3D12_INDEX_BUFFER_VIEW{};
+        }
     };
 
     struct Model
     {
         Mesh mesh;
+
+        inline void destroy()
+        {
+            mesh.destroy();
+        }
     };
 
     struct MVPTransforms
@@ -122,14 +140,17 @@ namespace bdr
         CD3DX12_VIEWPORT m_viewport;
         CD3DX12_RECT m_scissorRect;
         ComPtr<ID3D12Device> m_device;
-        ComPtr<ID3D12CommandQueue> m_graphicsQueue;
+        
+        CommandQueueManager m_cmdQueueManager;
+        GPUBufferManager m_gpuBufferManager;
+
         ComPtr<ID3D12CommandAllocator> m_commandAllocators[FRAME_COUNT];
         ComPtr<ID3D12GraphicsCommandList> m_commandList;
         ComPtr<IDXGISwapChain3> m_swapChain;
         ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
-        ComPtr<ID3D12Resource> m_renderTargets[FRAME_COUNT];
-        ComPtr<ID3D12Resource> m_depthBuffers[FRAME_COUNT];
+        GPUResource m_renderTargets[FRAME_COUNT];
+        GPUResource m_depthBuffers[FRAME_COUNT];
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pipelineState;
 
@@ -138,8 +159,6 @@ namespace bdr
         MVPTransforms m_mvpTransforms;
         uint8_t* m_pCbvDataBegin;
 
-        ComPtr<ID3D12Fence> m_fence;
-        HANDLE m_fenceEvent;
         uint64_t m_fenceValues[FRAME_COUNT];
         uint32_t m_frameIndex = 0;
 

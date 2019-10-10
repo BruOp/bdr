@@ -18,8 +18,14 @@ namespace bdr
     Renderer::~Renderer()
     {
         OutputDebugString(L"Cleaning up renderer\n");
-        if (m_fence) {
-            waitForGPU();
+
+        waitForGPU();
+
+        m_cube.destroy();
+
+        for (size_t i = 0; i < FRAME_COUNT; i++) {
+            m_renderTargets[i].destroy();
+            m_depthBuffers[i].destroy();
         }
     }
 
@@ -51,7 +57,7 @@ namespace bdr
     #endif
 
         ComPtr<IDXGIFactory4> factory;
-        ThrowIfFailed(CreateDXGIFactory2(
+        ASSERT_SUCCEEDED(CreateDXGIFactory2(
             dxgiFactoryFlags,
             IID_PPV_ARGS(&factory)
         ));
@@ -60,18 +66,15 @@ namespace bdr
         ComPtr<IDXGIAdapter1> hardwareAdapter;
         getHardwareAdapter(factory.Get(), &hardwareAdapter);
 
-        ThrowIfFailed(D3D12CreateDevice(
+        ASSERT_SUCCEEDED(D3D12CreateDevice(
             hardwareAdapter.Get(),
             D3D_FEATURE_LEVEL_12_0,
             IID_PPV_ARGS(&m_device)
         ));
 
-        // Graphics Command Queue
-        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        m_cmdQueueManager.init(m_device.Get());
 
-        ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_graphicsQueue)));
+        m_gpuBufferManager.init(m_device.Get(), &m_cmdQueueManager);
 
         // Swap Chain
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -85,7 +88,7 @@ namespace bdr
 
         ComPtr<IDXGISwapChain1> swapChain;
         ThrowIfFailed(factory->CreateSwapChainForHwnd(
-            m_graphicsQueue.Get(),
+            m_cmdQueueManager.m_graphicsQueue.get(),
             m_windowHandle,
             &swapChainDesc,
             nullptr,
@@ -279,47 +282,27 @@ namespace bdr
             const UINT vertexBufferSize = sizeof(cubeVertices);
             const UINT indexBufferSize = sizeof(cubeIndices);
 
-            ThrowIfFailed(m_device->CreateCommittedResource(
-                &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-                D3D12_HEAP_FLAG_NONE,
-                &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-                D3D12_RESOURCE_STATE_GENERIC_READ,
-                nullptr,
-                IID_PPV_ARGS(&m_cube.mesh.vertexBuffer)
-            ));
+            m_cube.mesh.vertexBuffer = m_gpuBufferManager.createOnGPU(
+                L"vertex buffer",
+                _countof(cubeVertices),
+                sizeof(Vertex),
+                cubeVertices
+            );
 
-            // Copy vertices
-            uint8_t* pVertexDataBegin = nullptr;
-            // This is zero because: "We do not intend to read from this resource on the CPU."
-            CD3DX12_RANGE readRange(0, 0);
-            ThrowIfFailed(m_cube.mesh.vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-            memcpy(pVertexDataBegin, cubeVertices, vertexBufferSize);
-            m_cube.mesh.vertexBuffer->Unmap(0, nullptr);
-
-            // Initialize the vertex buffer view
-            m_cube.mesh.vertexBufferView.BufferLocation = m_cube.mesh.vertexBuffer->GetGPUVirtualAddress();
+            // Initialize the vertex buffer view... this should maybe be done as part of the above
+            m_cube.mesh.vertexBufferView.BufferLocation = m_cube.mesh.vertexBuffer.resource->GetGPUVirtualAddress();
             m_cube.mesh.vertexBufferView.StrideInBytes = sizeof(Vertex);
             m_cube.mesh.vertexBufferView.SizeInBytes = vertexBufferSize;
 
-            ThrowIfFailed(m_device->CreateCommittedResource(
-                &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-                D3D12_HEAP_FLAG_NONE,
-                &CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize),
-                D3D12_RESOURCE_STATE_GENERIC_READ,
-                nullptr,
-                IID_PPV_ARGS(&m_cube.mesh.indexBuffer)
-            ));
-
-            // Copy indices
-            uint8_t* pIndexDataBegin = nullptr;
-            // This is zero because: "We do not intend to read from this resource on the CPU."
-            CD3DX12_RANGE indexReadRange(0, 0);
-            ThrowIfFailed(m_cube.mesh.indexBuffer->Map(0, &indexReadRange, reinterpret_cast<void**>(&pIndexDataBegin)));
-            memcpy(pIndexDataBegin, cubeIndices, indexBufferSize);
-            m_cube.mesh.indexBuffer->Unmap(0, nullptr);
+            m_cube.mesh.indexBuffer = m_gpuBufferManager.createOnGPU(
+                L"index buffer",
+                _countof(cubeIndices),
+                sizeof(uint16_t),
+                cubeIndices
+            );
 
             // Initialize the vertex buffer view
-            m_cube.mesh.indexBufferView.BufferLocation = m_cube.mesh.indexBuffer->GetGPUVirtualAddress();
+            m_cube.mesh.indexBufferView.BufferLocation = m_cube.mesh.indexBuffer.resource->GetGPUVirtualAddress();
             m_cube.mesh.indexBufferView.SizeInBytes = indexBufferSize;
             m_cube.mesh.indexBufferView.Format = DXGI_FORMAT_R16_UINT;
         }
@@ -349,18 +332,6 @@ namespace bdr
             memcpy(m_pCbvDataBegin, &m_mvpTransforms, sizeof(m_mvpTransforms));
         }
 
-        // Create fence for frame synchronization
-        {
-            ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-            m_fenceValues[m_frameIndex]++;
-
-            m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-            if (m_fenceEvent == nullptr) {
-                ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-            }
-
-        }
-
         // Wait for our setup to complete before continuing
         waitForGPU();
     }
@@ -379,7 +350,7 @@ namespace bdr
         XMStoreFloat4x4(&m_mvpTransforms.projection, projection);
 
         XMStoreFloat4x4(&m_mvpTransforms.viewProjection, XMMatrixMultiply(view, projection));
-        
+
         memcpy(m_pCbvDataBegin, &m_mvpTransforms, sizeof(m_mvpTransforms));
     }
 
@@ -389,8 +360,7 @@ namespace bdr
         populateCommandList();
 
         // Execute the command list
-        ID3D12CommandList* ppCommandLists[]{ m_commandList.Get() };
-        m_graphicsQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+        m_fenceValues[m_frameIndex] = m_cmdQueueManager.m_graphicsQueue.executeCommandList(m_commandList.Get());
 
         // Present
         // TODO: Look up syncInterval parameter here
@@ -412,14 +382,14 @@ namespace bdr
             m_viewport.Height = height;
             m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
-            waitForGPU();
-
             // Release existing references to the backbuffers and swapchain
             for (uint32_t i = 0; i < FRAME_COUNT; ++i) {
-                m_renderTargets[i].Reset();
-                // Reset fence values
-                m_fenceValues[i] = m_fenceValues[m_frameIndex];
+                // TODO: Make reset part of the resource interface?
+                m_renderTargets[i].destroy();
+                m_depthBuffers[i].destroy();
             }
+
+            waitForGPU();
 
             DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
             ThrowIfFailed(m_swapChain->GetDesc(&swapChainDesc));
@@ -440,9 +410,11 @@ namespace bdr
 
         // Create an RTV handle for each frame
         for (uint32_t n = 0; n < FRAME_COUNT; n++) {
-            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+            ID3D12Resource** ppRenderTarget = m_renderTargets[n].getPPtr();
+            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(ppRenderTarget)));
+            m_device->CreateRenderTargetView(*ppRenderTarget, nullptr, rtvHandle);
             rtvHandle.Offset(1, m_rtvDescriptorSize);
+            (*ppRenderTarget)->SetName(L"Render Target");
 
             // Resize screen dependent resources.
             // Create a depth buffer.
@@ -450,6 +422,7 @@ namespace bdr
             optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
             optimizedClearValue.DepthStencil = { 1.0f, 0 };
 
+            ID3D12Resource** ppDepthBuffer = m_depthBuffers[n].getPPtr();
             ThrowIfFailed(m_device->CreateCommittedResource(
                 &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
                 D3D12_HEAP_FLAG_NONE,
@@ -462,8 +435,9 @@ namespace bdr
                 ),
                 D3D12_RESOURCE_STATE_DEPTH_WRITE,
                 &optimizedClearValue,
-                IID_PPV_ARGS(&m_depthBuffers[n])
+                IID_PPV_ARGS(ppDepthBuffer)
             ));
+            (*ppDepthBuffer)->SetName(L"Depth Buffer");
 
             // Update the depth-stencil view.
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
@@ -472,13 +446,14 @@ namespace bdr
             dsvDesc.Texture2D.MipSlice = 0;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 
-            m_device->CreateDepthStencilView(m_depthBuffers[n].Get(), &dsvDesc, dsvHandle);
+            m_device->CreateDepthStencilView(*ppDepthBuffer, &dsvDesc, dsvHandle);
             dsvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
         }
     }
 
     void Renderer::populateCommandList()
     {
+        //
         // Command list allocators can only be reset when the associated 
         // command lists have finished execution on the GPU; apps should use 
         // fences to determine GPU execution progress.
@@ -488,6 +463,10 @@ namespace bdr
         // list, that command list can then be reset at any time and must be before 
         // re-recording.
         ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get()));
+
+        m_gpuBufferManager.execute(m_commandList.Get(), true);
+        // TODO: Figure out a better way to manage this thing's state
+        m_gpuBufferManager.reset();
 
         // Set necessary state.
         m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
@@ -500,7 +479,7 @@ namespace bdr
         m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
         // Indicate that the back buffer will be used as a render target.
-        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
         CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(
@@ -521,7 +500,7 @@ namespace bdr
         m_commandList->DrawIndexedInstanced(_countof(cubeIndices), 1, 0, 0, 0);
 
         // Indicate that the back buffer will now be used to present.
-        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
         ThrowIfFailed(m_commandList->Close());
 
@@ -529,31 +508,21 @@ namespace bdr
 
     void Renderer::waitForGPU()
     {
-        const uint64_t fenceValue = m_fenceValues[m_frameIndex];
-        ThrowIfFailed(m_graphicsQueue->Signal(m_fence.Get(), fenceValue));
-
-        ThrowIfFailed(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
-        WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-
-        m_fenceValues[m_frameIndex]++;
+        m_cmdQueueManager.m_graphicsQueue.waitForIdle();
     }
 
     void Renderer::moveToNextFrame()
     {
         const uint64_t fenceValue = m_fenceValues[m_frameIndex];
-        ThrowIfFailed(m_graphicsQueue->Signal(m_fence.Get(), fenceValue));
 
         // Update the frame index.
         m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
         // If the next frame is not ready to be rendered yet, wait until it is ready.
-        if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex]) {
-            ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
-            WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-        }
+        m_cmdQueueManager.m_graphicsQueue.waitForFence(fenceValue);
 
-        // Set the fence value for the next frame.
-        m_fenceValues[m_frameIndex] = fenceValue + 1;
+        //// Set the fence value for the next frame.
+        //m_fenceValues[m_frameIndex] = fenceValue + 1;
     }
 
     _Use_decl_annotations_

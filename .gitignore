@@ -1,2 +1,6 @@
 BDR/.build
 .vs/
+
+*.APS
+*.rc
+BDR/resource.h

@@ -14,7 +14,7 @@ namespace bdr
             m_hwnd(nullptr)
         { }
 
-        void run(HINSTANCE hInstance);
+        void run();
 
         void update();
         void render();

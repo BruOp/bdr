@@ -50,16 +50,16 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\Repos\bdr\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>D:\Repos\bdr\external\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>d3d12.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -80,13 +80,28 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\app.cpp" />
+    <ClCompile Include="..\src\CommandContext.cpp" />
+    <ClCompile Include="..\src\CommandListManager.cpp" />
+    <ClCompile Include="..\src\CommandQueue.cpp" />
+    <ClCompile Include="..\src\GPUBuffer.cpp" />
+    <ClCompile Include="..\src\GPUResource.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\app.h" />
+    <ClInclude Include="..\include\CommandAllocatorPool.h" />
+    <ClInclude Include="..\include\CommandContext.h" />
+    <ClInclude Include="..\include\CommandListManager.h" />
+    <ClInclude Include="..\include\CommandQueue.h" />
     <ClInclude Include="..\include\dx_helpers.h" />
+    <ClInclude Include="..\include\GPUBuffer.h" />
+    <ClInclude Include="..\include\GPUResource.h" />
     <ClInclude Include="..\include\renderer.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="BDR.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
