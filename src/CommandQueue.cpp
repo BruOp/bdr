@@ -55,7 +55,7 @@ namespace bdr
     bool CommandQueue::isFenceComplete(const uint64_t fenceValue)
     {
         if (fenceValue > m_lastCompletedValue) {
-            m_lastCompletedValue = getCurrentFenceValue();
+            m_lastCompletedValue = getCompletedFenceValue();
         }
         return m_lastCompletedValue >= fenceValue;
     }

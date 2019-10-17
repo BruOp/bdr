@@ -54,7 +54,7 @@ namespace bdr
             return m_nextFenceValue;
         }
         
-        inline uint64_t getCurrentFenceValue() const {
+        inline uint64_t getCompletedFenceValue() const {
             uint64_t completedValue = m_pFence->GetCompletedValue();
             return m_lastCompletedValue > completedValue ? m_lastCompletedValue : completedValue;
         }
