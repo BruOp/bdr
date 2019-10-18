@@ -464,7 +464,7 @@ namespace bdr
         // re-recording.
         ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get()));
 
-        m_gpuBufferManager.execute(m_commandList.Get(), true);
+        m_gpuBufferManager.execute(true);
         // TODO: Figure out a better way to manage this thing's state
         m_gpuBufferManager.reset();
 

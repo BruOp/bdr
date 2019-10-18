@@ -43,8 +43,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\Repos\bdr\include;$(IncludePath)</IncludePath>
-    <SourcePath>D:\Repos\bdr\src;$(SourcePath)</SourcePath>
+    <IncludePath>$(ProjectDir)..\include;$(IncludePath)</IncludePath>
+    <SourcePath>$(ProjectDir)..\src;$(SourcePath)</SourcePath>
     <OutDir>$(ProjectDir).build\bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir).build\obj\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -54,7 +54,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Repos\bdr\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -80,7 +80,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\app.cpp" />
-    <ClCompile Include="..\src\CommandContext.cpp" />
     <ClCompile Include="..\src\CommandListManager.cpp" />
     <ClCompile Include="..\src\CommandQueue.cpp" />
     <ClCompile Include="..\src\GPUBuffer.cpp" />
@@ -91,7 +90,6 @@
   <ItemGroup>
     <ClInclude Include="..\include\app.h" />
     <ClInclude Include="..\include\CommandAllocatorPool.h" />
-    <ClInclude Include="..\include\CommandContext.h" />
     <ClInclude Include="..\include\CommandListManager.h" />
     <ClInclude Include="..\include\CommandQueue.h" />
     <ClInclude Include="..\include\dx_helpers.h" />
@@ -99,9 +97,6 @@
     <ClInclude Include="..\include\GPUResource.h" />
     <ClInclude Include="..\include\renderer.h" />
     <ClInclude Include="resource.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="BDR.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

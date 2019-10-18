@@ -37,7 +37,7 @@ namespace bdr
         // Executes copy commands on the copy queue, and also adds the resource barriers to the input
         // graphicsCmdList. This function must be called before using any of the resources returned
         // from the `createOnGPU` function
-        void execute(ID3D12GraphicsCommandList* graphicsCmdList, bool waitForCompletion = false);
+        void execute(bool waitForCompletion = false);
 
         GPUBuffer createOnGPU(
             const std::wstring& name,
@@ -45,6 +45,8 @@ namespace bdr
             const uint32_t elementSize,
             const void* userData = nullptr
         );
+
+        bool isComplete() const;
 
         // Don't own these
         ID3D12Device* m_device = nullptr;
@@ -57,7 +59,7 @@ namespace bdr
         std::array<D3D12_RESOURCE_BARRIER, STAGING_MAX> m_resourceBarriers;
         size_t m_stagedEndIdx = 0;
         bool m_isReady = false;
-        bool m_inFlight = false;
+        uint64_t m_currentFence = 0;
     };
 }
 

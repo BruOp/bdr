@@ -29,8 +29,11 @@ namespace bdr
 
         buffer.resource->SetName(name.c_str());
         if (userData != nullptr) {
-            ASSERT(!m_inFlight);
-            ASSERT(m_stagedEndIdx < STAGING_MAX, "Arbitrary limit on copies reached!");
+            ASSERT(isComplete());
+            if (m_stagedEndIdx == STAGING_MAX - 1) {
+                execute(true);
+                reset();
+            };
 
             // Create staging buffer
             D3D12_RESOURCE_BARRIER barrierDesc = m_resourceBarriers[m_stagedEndIdx];
@@ -56,14 +59,20 @@ namespace bdr
             m_commandList->CopyBufferRegion(buffer.resource.get(), 0, stagingBuffer.get(), 0, buffer.bufferSize);
 
             // Create transition barriers for our resources
-            barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrierDesc.Transition.pResource = buffer.resource.get();
-            barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+            // NOTE: Not used, since these resources should decay to D3D12_RESOURCE_STATE_COMMON after the copy
+            //barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            //barrierDesc.Transition.pResource = buffer.resource.get();
+            //barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            //barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            //barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
         }
 
         return buffer;
+    }
+
+    bool GPUBufferManager::isComplete() const
+    {
+        return m_cmdQueueManager->m_copyQueue.isFenceComplete(m_currentFence);
     }
 
     void GPUBufferManager::init(ID3D12Device* pDevice, CommandQueueManager* pCmdQueueManager)
@@ -90,10 +99,10 @@ namespace bdr
 
     void GPUBufferManager::reset()
     {
-        if (!m_inFlight) {
+        ASSERT(isComplete());
+        if (m_stagedEndIdx == 0) {
             return;
         }
-        m_cmdQueueManager->m_copyQueue.waitForIdle();
         m_commandAllocator = m_cmdQueueManager->m_copyQueue.requestAllocator();
         ASSERT_SUCCEEDED(m_commandList->Reset(m_commandAllocator, nullptr));
 
@@ -101,13 +110,12 @@ namespace bdr
             m_stagingBuffers[i]->Release();
         }
         m_stagedEndIdx = 0;
-        m_inFlight = false;
     }
 
 
-    void GPUBufferManager::execute(ID3D12GraphicsCommandList* graphicsCmdList, bool waitForCompletion)
+    void GPUBufferManager::execute(bool waitForCompletion)
     {
-        ASSERT(!m_inFlight);
+        ASSERT(isComplete());
         // Don't execute if we don't have any resources to copy/transition
         if (m_stagedEndIdx == 0) {
             return;
@@ -119,17 +127,16 @@ namespace bdr
         // First deal with executing the copy commands
         // Our command list is already populated through calls to createOnGPU
         ASSERT_SUCCEEDED(m_commandList->Close());
-        uint64_t fenceValue = copyQueue.executeCommandList(m_commandList);
+        m_currentFence = copyQueue.executeCommandList(m_commandList);
         
-        m_inFlight = true;
-        copyQueue.returnAllocator(fenceValue, m_commandAllocator);
+        copyQueue.returnAllocator(m_currentFence, m_commandAllocator);
         m_commandAllocator = nullptr;
 
         // Now deal with Resource Barriers on the graphics queue
-        graphicsQueue.insertWaitOnOtherQueueFence(&copyQueue, fenceValue);
+        graphicsQueue.insertWaitOnOtherQueueFence(&copyQueue, m_currentFence);
 
         if (waitForCompletion) {
-            copyQueue.waitForFence(fenceValue);
+            copyQueue.waitForFence(m_currentFence);
         }
     }
     
