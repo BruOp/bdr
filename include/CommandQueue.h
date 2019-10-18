@@ -25,6 +25,13 @@ namespace bdr
             return m_pQueue;
         }
 
+        uint64_t incrementFence()
+        {
+            std::lock_guard<std::mutex> lockGuard(m_fenceMutex);
+            m_pQueue->Signal(m_pFence, m_nextFenceValue);
+            return m_nextFenceValue++;
+        }
+
         bool isFenceComplete(const uint64_t fenceValue);
         // Note that these functions are NOT CPU blocking!
         void insertWait(const uint64_t fenceValue);
@@ -84,6 +91,12 @@ namespace bdr
             D3D12_COMMAND_LIST_TYPE type,
             ID3D12GraphicsCommandList** list,
             ID3D12CommandAllocator** allocator);
+        void waitForIdle()
+        {
+            m_graphicsQueue.waitForIdle();
+            m_computeQueue.waitForIdle();
+            m_copyQueue.waitForIdle();
+        }
         
         CommandQueue m_graphicsQueue;
         CommandQueue m_computeQueue;

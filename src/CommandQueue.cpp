@@ -29,11 +29,25 @@ namespace bdr
         queueDesc.Type = m_type;
 
         ASSERT_SUCCEEDED(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_pQueue)));
-        m_pQueue->SetName(L"CommandQueue::m_pQueue");
 
         ASSERT_SUCCEEDED(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_pFence)));
-        m_pFence->SetName(L"CommandQueue::m_pFence");
+        
         m_pFence->Signal(m_lastCompletedValue);
+
+        switch (m_type) {
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:
+            m_pQueue->SetName(L"DIRECT_CommandQueue::m_pQueue");
+            m_pFence->SetName(L"DIRECT_CommandQueue::m_pFence");
+            break;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+            m_pQueue->SetName(L"COMPUTE_CommandQueue::m_pQueue");
+            m_pFence->SetName(L"COMPUTE_CommandQueue::m_pFence");
+            break;
+        case D3D12_COMMAND_LIST_TYPE_COPY:
+            m_pQueue->SetName(L"COPY_CommandQueue::m_pQueue");
+            m_pFence->SetName(L"COPY_CommandQueue::m_pFence");
+            break;
+        }
 
         m_fenceEventHandle = CreateEventEx(NULL, false, false, EVENT_ALL_ACCESS);
         ASSERT(m_fenceEventHandle != INVALID_HANDLE_VALUE);

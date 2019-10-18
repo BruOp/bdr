@@ -381,20 +381,20 @@ namespace bdr
             m_viewport.Width = width;
             m_viewport.Height = height;
             m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+            
+            waitForGPU();
 
             // Release existing references to the backbuffers and swapchain
             for (uint32_t i = 0; i < FRAME_COUNT; ++i) {
-                // TODO: Make reset part of the resource interface?
                 m_renderTargets[i].destroy();
                 m_depthBuffers[i].destroy();
+                
             }
-
-            waitForGPU();
 
             DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
             ThrowIfFailed(m_swapChain->GetDesc(&swapChainDesc));
-            ThrowIfFailed(m_swapChain->ResizeBuffers(FRAME_COUNT, width, height,
-                swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+            ThrowIfFailed(m_swapChain->ResizeBuffers(0, width, height,
+                DXGI_FORMAT_UNKNOWN, swapChainDesc.Flags));
 
             m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
@@ -508,7 +508,8 @@ namespace bdr
 
     void Renderer::waitForGPU()
     {
-        m_cmdQueueManager.m_graphicsQueue.waitForIdle();
+        m_cmdQueueManager.m_graphicsQueue.incrementFence();
+        m_cmdQueueManager.waitForIdle();
     }
 
     void Renderer::moveToNextFrame()
