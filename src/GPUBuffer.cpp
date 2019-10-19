@@ -24,10 +24,11 @@ namespace bdr
             &CD3DX12_RESOURCE_DESC::Buffer(buffer.bufferSize),
             D3D12_RESOURCE_STATE_COPY_DEST,
             nullptr,
-            IID_PPV_ARGS(&buffer.resource.m_pResource)
+            IID_PPV_ARGS(&buffer.pResource)
         ));
+        buffer->SetName(name.c_str());
+        buffer.gpuVirtualAddress = buffer->GetGPUVirtualAddress();
 
-        buffer.resource->SetName(name.c_str());
         if (userData != nullptr) {
             ASSERT(isComplete());
             if (m_stagedEndIdx == STAGING_MAX - 1) {
@@ -56,15 +57,7 @@ namespace bdr
             stagingBuffer->Unmap(0, nullptr);
 
             // Issue the copy call to the command list
-            m_commandList->CopyBufferRegion(buffer.resource.get(), 0, stagingBuffer.get(), 0, buffer.bufferSize);
-
-            // Create transition barriers for our resources
-            // NOTE: Not used, since these resources should decay to D3D12_RESOURCE_STATE_COMMON after the copy
-            //barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            //barrierDesc.Transition.pResource = buffer.resource.get();
-            //barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            //barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            //barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+            m_commandList->CopyBufferRegion(buffer.get(), 0, stagingBuffer.get(), 0, buffer.bufferSize);
         }
 
         return buffer;
@@ -138,13 +131,5 @@ namespace bdr
         if (waitForCompletion) {
             copyQueue.waitForFence(m_currentFence);
         }
-    }
-    
-    void GPUBuffer::destroy()
-    {
-        resource.destroy();
-        bufferSize = 0;
-        numElements = 0;
-        elementSize = 0;
-    }
+    }   
 }

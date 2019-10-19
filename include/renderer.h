@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <chrono>
 #include "stdafx.h"
 
 #include "CommandQueue.h"
@@ -167,6 +168,7 @@ namespace bdr
         uint32_t m_rtvDescriptorSize = 0;
 
         float m_aspectRatio;
-        bool m_contentLoaded = false;
+        std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
+        float m_lastFrame = 0.0f;
     };
 }

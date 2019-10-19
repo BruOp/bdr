@@ -28,7 +28,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -47,6 +47,12 @@
     <SourcePath>$(ProjectDir)..\src;$(SourcePath)</SourcePath>
     <OutDir>$(ProjectDir).build\bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir).build\obj\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(ProjectDir).build\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir).build\obj\$(Platform)\$(Configuration)\</IntDir>
+    <IncludePath>$(ProjectDir)..\include;$(IncludePath)</IncludePath>
+    <SourcePath>$(ProjectDir)..\src;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -71,11 +77,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>d3d12.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -86,6 +95,7 @@
     <ClCompile Include="..\src\GPUResource.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\renderer.cpp" />
+    <ClCompile Include="..\src\SystemTime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\app.h" />
@@ -96,6 +106,7 @@
     <ClInclude Include="..\include\GPUBuffer.h" />
     <ClInclude Include="..\include\GPUResource.h" />
     <ClInclude Include="..\include\renderer.h" />
+    <ClInclude Include="..\include\SystemTime.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

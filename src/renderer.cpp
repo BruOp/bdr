@@ -1,5 +1,7 @@
 #include "renderer.h"
+
 #include "dx_helpers.h"
+
 
 using namespace DirectX;
 
@@ -290,7 +292,7 @@ namespace bdr
             );
 
             // Initialize the vertex buffer view... this should maybe be done as part of the above
-            m_cube.mesh.vertexBufferView.BufferLocation = m_cube.mesh.vertexBuffer.resource->GetGPUVirtualAddress();
+            m_cube.mesh.vertexBufferView.BufferLocation = m_cube.mesh.vertexBuffer.gpuVirtualAddress;
             m_cube.mesh.vertexBufferView.StrideInBytes = sizeof(Vertex);
             m_cube.mesh.vertexBufferView.SizeInBytes = vertexBufferSize;
 
@@ -302,7 +304,7 @@ namespace bdr
             );
 
             // Initialize the vertex buffer view
-            m_cube.mesh.indexBufferView.BufferLocation = m_cube.mesh.indexBuffer.resource->GetGPUVirtualAddress();
+            m_cube.mesh.indexBufferView.BufferLocation = m_cube.mesh.indexBuffer.gpuVirtualAddress;
             m_cube.mesh.indexBufferView.SizeInBytes = indexBufferSize;
             m_cube.mesh.indexBufferView.Format = DXGI_FORMAT_R16_UINT;
         }
@@ -338,10 +340,18 @@ namespace bdr
 
     void Renderer::onUpdate()
     {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto time = now - m_startTime;
+        float frame = std::chrono::duration_cast<std::chrono::duration<float>>(time).count();
+        float deltaTime = frame - m_lastFrame;
+        m_lastFrame = frame;
+
         const float translationSpeed = 0.005f;
         const float offsetBounds = 1.25f;
 
-        XMStoreFloat4x4(&m_mvpTransforms.model, XMMatrixIdentity());
+        XMMATRIX rotation = XMMatrixRotationAxis(XMVECTOR{ 1.0f, 0.0f, 1.0f, 1.0f }, frame);
+        
+        XMStoreFloat4x4(&m_mvpTransforms.model, rotation);
 
         XMMATRIX view = XMMatrixLookAtRH(XMVECTOR{ 0.0f, 0.0f, 2.0f, 0.0f }, XMVECTOR{ 0.0f, 0.0f, 0.0f, 0.0f }, XMVECTOR{ 0.0f, 1.0f, 0.0f, 0.0f });
         XMStoreFloat4x4(&m_mvpTransforms.view, view);

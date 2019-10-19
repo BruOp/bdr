@@ -6,15 +6,25 @@
 
 namespace bdr
 {
-    struct GPUBuffer
+    struct GPUBuffer : GPUResource
     {
-        uint32_t numElements;
-        uint32_t elementSize;
-        size_t bufferSize;
+        GPUBuffer() = default;
+        GPUBuffer(uint32_t numElements, uint32_t elementSize, size_t bufferSize) :
+            GPUResource{ },
+            numElements{ numElements },
+            elementSize{ elementSize },
+            bufferSize{ bufferSize }
+        { }
+        GPUBuffer(ID3D12Resource* resource, uint32_t numElements, uint32_t elementSize, size_t bufferSize) :
+            GPUResource{ resource },
+            numElements{ numElements },
+            elementSize{ elementSize },
+            bufferSize{ bufferSize }
+        { }
 
-        GPUResource resource;
-
-        void destroy();
+        uint32_t numElements = 0;
+        uint32_t elementSize = 0;
+        size_t bufferSize = 0;
     };
 
     class GPUBufferManager
