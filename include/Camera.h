@@ -8,6 +8,7 @@ namespace bdr
         Camera();
         Camera(const float FoV, const float aspectRatio, const float near_, const float far_);
 
+        void updateDirection(DirectX::XMVECTOR newDirection);
         void updateView();
         void updateProjection(const float aspectRatio);
         void updateProjection(const float FoV, const float aspectRatio, const float near_, const float far_);
@@ -34,7 +35,10 @@ namespace bdr
             return XMMatrixMultiply(view, projection);
         };
 
+        // Directions in world space
         DirectX::XMVECTOR direction;
+        DirectX::XMVECTOR right;
+        DirectX::XMVECTOR up;
         DirectX::XMVECTOR position;
 
         DirectX::XMMATRIX view;

@@ -18,7 +18,6 @@ namespace bdr
         m_scissorRect{ 0, 0, LONG_MAX, LONG_MAX }
     {
         m_camera.position = XMVECTOR{ 0.0f, 0.0f, 5.0f, 1.0f };
-        m_camera.updateView();
         m_camera.updateProjection(60.0f, m_aspectRatio, 1.0f, 1000.0f);
     }
 
@@ -62,6 +61,7 @@ namespace bdr
                 dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
             }
         }
+
     #endif
 
         ComPtr<IDXGIFactory4> factory;
@@ -228,7 +228,7 @@ namespace bdr
                     OutputDebugStringA((char*)error->GetBufferPointer());
                 }
                 ThrowIfFailed(hr);
-            }
+                }
 
             ThrowIfFailed(D3DCompileFromFile(
                 GetAssetFullPath(L"shaders.hlsl").c_str(),
@@ -270,7 +270,7 @@ namespace bdr
             psoDesc.SampleDesc.Count = 1;
 
             ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-        }
+            }
 
         // Command List
         ThrowIfFailed(m_device->CreateCommandList(
@@ -342,19 +342,13 @@ namespace bdr
 
         // Wait for our setup to complete before continuing
         waitForGPU();
-    }
+        }
 
-    void Renderer::onUpdate()
+    void Renderer::onUpdate(float deltaTime, float timeElapsed)
     {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto time = now - m_startTime;
-        float frame = std::chrono::duration_cast<std::chrono::duration<float>>(time).count();
-        float deltaTime = frame - m_lastFrame;
-        m_lastFrame = frame;
-
         // Set MVP Transforms
         {
-            XMMATRIX rotation = XMMatrixRotationAxis(XMVECTOR{ 1.0f, 0.0f, 1.0f, 1.0f }, frame);
+            XMMATRIX rotation = XMMatrixRotationAxis(XMVECTOR{ 1.0f, 0.0f, 1.0f, 1.0f }, timeElapsed);
             XMStoreFloat4x4(&m_mvpTransforms.model, rotation);
             m_camera.storeViewAsFloat4x4(&m_mvpTransforms.view);
             m_camera.storeProjectionAsFloat4x4(&m_mvpTransforms.projection);
@@ -392,14 +386,14 @@ namespace bdr
             m_viewport.Height = height;
             m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
             m_camera.updateProjection(m_aspectRatio);
-            
+
             waitForGPU();
 
             // Release existing references to the backbuffers and swapchain
             for (uint32_t i = 0; i < FRAME_COUNT; ++i) {
                 m_renderTargets[i].destroy();
                 m_depthBuffers[i].destroy();
-                
+
             }
 
             DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
@@ -567,4 +561,4 @@ namespace bdr
         // Store our new adapter in the IDXGIAdapter function parameter
         *ppAdapter = adapter.Detach();
     }
-}
+    }

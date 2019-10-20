@@ -5,19 +5,25 @@ namespace bdr
     void App::run()
     {
         OutputDebugString(L"Starting App!\n");
-        
+
         Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
         ASSERT_SUCCEEDED(InitializeWinRT);
 
         HINSTANCE hInstance = GetModuleHandle(0);
 
         initWindow(hInstance);
+        GameInput::Initialize(m_hwnd);
         m_renderer.init(m_hwnd);
+        m_controller = FPSCameraController{ &m_renderer.m_camera, 1.0f, 1.0f };
         ShowWindow(m_hwnd, SW_SHOW);
 
         // Main sample loop.
         MSG msg = {};
         while (msg.message != WM_QUIT) {
+            if (GameInput::IsPressed(GameInput::kKey_escape)) {
+                break;
+            }
+
             // Process any messages in the queue.
             if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
                 TranslateMessage(&msg);
@@ -28,18 +34,20 @@ namespace bdr
 
     void App::update()
     {
-        m_renderer.onUpdate();
+        auto now = std::chrono::high_resolution_clock::now();
+        auto time = now - m_startTime;
+        float frame = std::chrono::duration_cast<std::chrono::duration<float>>(time).count();
+        float deltaTime = frame - m_lastFrame;
+        m_lastFrame = frame;
+
+        GameInput::Update(deltaTime);
+        m_controller.update(deltaTime);
+        m_renderer.onUpdate(deltaTime, frame);
     }
 
     void App::render()
     {
         m_renderer.onRender();
-    }
-
-    void App::onKeyDown(uint8_t key)
-    {
-        std::wstring keyCode = L"Key pressed! Honk! " + std::to_wstring(key) + L"\n";
-        OutputDebugString(keyCode.c_str());
     }
 
     LRESULT App::windowProcedure(HWND hWnd, uint32_t message, WPARAM wParam, LPARAM lParam)
@@ -48,25 +56,12 @@ namespace bdr
         App* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
         switch (message) {
-            case WM_CREATE:
-            {
-                LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-                SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
-            }
-            return 0;
-
-        case WM_KEYDOWN:
-            if (app) {
-                app->onKeyDown(static_cast<uint8_t>(wParam));
-            }
-            return 0;
-
-            //case WM_KEYUP:
-            //    if (app) {
-            //        app->onKeyUp(static_cast<UINT8>(wParam));
-            //    }
-            //    return 0;
-
+        case WM_CREATE:
+        {
+            LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+            SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+        }
+        return 0;
         case WM_PAINT:
             if (app) {
                 app->update();

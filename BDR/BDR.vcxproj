@@ -92,6 +92,8 @@
     <ClCompile Include="..\src\Camera.cpp" />
     <ClCompile Include="..\src\CommandListManager.cpp" />
     <ClCompile Include="..\src\CommandQueue.cpp" />
+    <ClCompile Include="..\src\FPSCameraController.cpp" />
+    <ClCompile Include="..\src\GameInput.cpp" />
     <ClCompile Include="..\src\GPUBuffer.cpp" />
     <ClCompile Include="..\src\GPUResource.cpp" />
     <ClCompile Include="..\src\main.cpp" />
@@ -104,6 +106,8 @@
     <ClInclude Include="..\include\CommandListManager.h" />
     <ClInclude Include="..\include\CommandQueue.h" />
     <ClInclude Include="..\include\dx_helpers.h" />
+    <ClInclude Include="..\include\FPSCameraController.h" />
+    <ClInclude Include="..\include\GameInput.h" />
     <ClInclude Include="..\include\GPUBuffer.h" />
     <ClInclude Include="..\include\GPUResource.h" />
     <ClInclude Include="..\include\renderer.h" />
