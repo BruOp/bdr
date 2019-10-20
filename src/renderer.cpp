@@ -1,6 +1,7 @@
 #include "renderer.h"
 
 #include "dx_helpers.h"
+#include "..\include\Camera.h"
 
 
 using namespace DirectX;
@@ -9,12 +10,17 @@ namespace bdr
 {
     Renderer::Renderer(const RenderConfig& renderConfig) :
         m_renderConfig(renderConfig),
+        m_camera{ },
         m_rtvDescriptorSize{ 0 },
         m_frameIndex{ 0 },
         m_aspectRatio{ static_cast<float>(renderConfig.width) / static_cast<float>(renderConfig.height) },
         m_viewport{ 0.0f, 0.0f, static_cast<FLOAT>(renderConfig.width), static_cast<FLOAT>(renderConfig.height) },
         m_scissorRect{ 0, 0, LONG_MAX, LONG_MAX }
-    { }
+    {
+        m_camera.position = XMVECTOR{ 0.0f, 0.0f, 5.0f, 1.0f };
+        m_camera.updateView();
+        m_camera.updateProjection(60.0f, m_aspectRatio, 1.0f, 1000.0f);
+    }
 
 
     Renderer::~Renderer()
@@ -346,20 +352,14 @@ namespace bdr
         float deltaTime = frame - m_lastFrame;
         m_lastFrame = frame;
 
-        const float translationSpeed = 0.005f;
-        const float offsetBounds = 1.25f;
-
-        XMMATRIX rotation = XMMatrixRotationAxis(XMVECTOR{ 1.0f, 0.0f, 1.0f, 1.0f }, frame);
-        
-        XMStoreFloat4x4(&m_mvpTransforms.model, rotation);
-
-        XMMATRIX view = XMMatrixLookAtRH(XMVECTOR{ 0.0f, 0.0f, 2.0f, 0.0f }, XMVECTOR{ 0.0f, 0.0f, 0.0f, 0.0f }, XMVECTOR{ 0.0f, 1.0f, 0.0f, 0.0f });
-        XMStoreFloat4x4(&m_mvpTransforms.view, view);
-
-        XMMATRIX projection = XMMatrixPerspectiveFovRH(XMConvertToRadians(60.0f), m_aspectRatio, 0.1f, 100.0f);
-        XMStoreFloat4x4(&m_mvpTransforms.projection, projection);
-
-        XMStoreFloat4x4(&m_mvpTransforms.viewProjection, XMMatrixMultiply(view, projection));
+        // Set MVP Transforms
+        {
+            XMMATRIX rotation = XMMatrixRotationAxis(XMVECTOR{ 1.0f, 0.0f, 1.0f, 1.0f }, frame);
+            XMStoreFloat4x4(&m_mvpTransforms.model, rotation);
+            m_camera.storeViewAsFloat4x4(&m_mvpTransforms.view);
+            m_camera.storeProjectionAsFloat4x4(&m_mvpTransforms.projection);
+            m_camera.storeViewProjectionAsFloat4x4(&m_mvpTransforms.viewProjection);
+        }
 
         memcpy(m_pCbvDataBegin, &m_mvpTransforms, sizeof(m_mvpTransforms));
     }
@@ -391,6 +391,7 @@ namespace bdr
             m_viewport.Width = width;
             m_viewport.Height = height;
             m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+            m_camera.updateProjection(m_aspectRatio);
             
             waitForGPU();
 
@@ -566,12 +567,4 @@ namespace bdr
         // Store our new adapter in the IDXGIAdapter function parameter
         *ppAdapter = adapter.Detach();
     }
-
-
-    void Camera::updateView()
-    {
-        XMVECTOR up = XMVectorGetY(direction) != 1.0f ? XMVECTOR{ 0.0f, 1.0f, 0.0f, 0.0f } : XMVECTOR{ 1.0f, 0.0f, 0.0f, 0.0f };
-
-        XMMatrixLookAtRH(position, XMVectorAdd(position, direction), up);
-    };
 }

@@ -6,6 +6,7 @@
 #include "CommandQueue.h"
 #include "GPUResource.h"
 #include "GPUBuffer.h"
+#include "Camera.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -90,16 +91,6 @@ namespace bdr
         DirectX::XMFLOAT4X4 viewProjection;
     };
 
-    struct Camera
-    {
-        DirectX::XMVECTOR position;
-        DirectX::XMVECTOR direction = { 0.0f, 0.0f, -1.0f, 0.0f };
-        DirectX::XMFLOAT4X4 view;
-        DirectX::XMFLOAT4X4 projection;
-
-        void updateView();
-    };
-
     struct RenderConfig
     {
         uint16_t width;
@@ -128,6 +119,7 @@ namespace bdr
 
         RenderConfig m_renderConfig;
         HWND m_windowHandle = nullptr;
+        Camera m_camera;
 
     private:
         static constexpr uint32_t FRAME_COUNT = 2u;

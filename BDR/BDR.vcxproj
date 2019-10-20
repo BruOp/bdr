@@ -89,16 +89,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\app.cpp" />
+    <ClCompile Include="..\src\Camera.cpp" />
     <ClCompile Include="..\src\CommandListManager.cpp" />
     <ClCompile Include="..\src\CommandQueue.cpp" />
     <ClCompile Include="..\src\GPUBuffer.cpp" />
     <ClCompile Include="..\src\GPUResource.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\renderer.cpp" />
-    <ClCompile Include="..\src\SystemTime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\app.h" />
+    <ClInclude Include="..\include\Camera.h" />
     <ClInclude Include="..\include\CommandAllocatorPool.h" />
     <ClInclude Include="..\include\CommandListManager.h" />
     <ClInclude Include="..\include\CommandQueue.h" />
@@ -106,7 +107,6 @@
     <ClInclude Include="..\include\GPUBuffer.h" />
     <ClInclude Include="..\include\GPUResource.h" />
     <ClInclude Include="..\include\renderer.h" />
-    <ClInclude Include="..\include\SystemTime.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
