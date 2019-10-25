@@ -19,8 +19,8 @@ namespace bdr
         float m_speed = 1.0f;
         float m_sensitivity = 1.0f;
 
-        float m_pitch;
-        float m_yaw;
+        float m_pitch = 0.0f;
+        float m_yaw = DirectX::XM_PIDIV2;
 
         DirectX::XMVECTOR m_velocity = { 0.0f, 0.0f, 0.0f, 0.0f };
     };
