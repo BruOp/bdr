@@ -48,6 +48,10 @@ namespace bdr
         {
             return pResource;
         }
+
+        inline bool isValid() { return pResource == nullptr; }
+
+
         ID3D12Resource* pResource = nullptr;
         D3D12_RESOURCE_STATES usageState = D3D12_RESOURCE_STATE_COMMON;
         D3D12_RESOURCE_STATES transitioningState = D3D12_RESOURCE_STATE_COMMON;

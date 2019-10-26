@@ -96,6 +96,7 @@
     <ClCompile Include="..\src\GameInput.cpp" />
     <ClCompile Include="..\src\GPUBuffer.cpp" />
     <ClCompile Include="..\src\GPUResource.cpp" />
+    <ClCompile Include="..\src\LinearAllocator.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\renderer.cpp" />
   </ItemGroup>
@@ -110,6 +111,7 @@
     <ClInclude Include="..\include\GameInput.h" />
     <ClInclude Include="..\include\GPUBuffer.h" />
     <ClInclude Include="..\include\GPUResource.h" />
+    <ClInclude Include="..\include\LinearAllocator.h" />
     <ClInclude Include="..\include\renderer.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>

@@ -1,4 +1,5 @@
 #include "CommandQueue.h"
+#include "..\include\CommandQueue.h"
 
 namespace bdr
 {
@@ -23,7 +24,7 @@ namespace bdr
         ASSERT(pDevice != nullptr);
         ASSERT(!isReady());
         ASSERT(m_allocatorPool.size() == 0);
-        
+
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         queueDesc.Type = m_type;
@@ -31,7 +32,7 @@ namespace bdr
         ASSERT_SUCCEEDED(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_pQueue)));
 
         ASSERT_SUCCEEDED(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_pFence)));
-        
+
         m_pFence->Signal(m_lastCompletedValue);
 
         switch (m_type) {
@@ -121,7 +122,7 @@ namespace bdr
         m_copyQueue{ D3D12_COMMAND_LIST_TYPE_COPY },
         m_pDevice{ nullptr }
     { }
-    
+
     void CommandQueueManager::init(ID3D12Device* pDevice)
     {
         m_pDevice = pDevice;
@@ -129,7 +130,7 @@ namespace bdr
         m_computeQueue.init(pDevice);
         m_copyQueue.init(pDevice);
     }
-    
+
     void CommandQueueManager::createNewCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList** list, ID3D12CommandAllocator** allocator)
     {
         switch (type) {
@@ -140,5 +141,19 @@ namespace bdr
 
         ASSERT_SUCCEEDED(m_pDevice->CreateCommandList(1, type, *allocator, nullptr, IID_PPV_ARGS(list)));
         (*list)->SetName(L"CommandList");
+    }
+
+    bool CommandQueueManager::isFenceComplete(const uint64_t fenceValue)
+    {
+        return getQueue(D3D12_COMMAND_LIST_TYPE(fenceValue >> 56)).isFenceComplete(fenceValue);
+    }
+
+    CommandQueue& CommandQueueManager::getQueue(D3D12_COMMAND_LIST_TYPE type)
+    {
+        switch (type) {
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return m_computeQueue;
+        case D3D12_COMMAND_LIST_TYPE_COPY: return m_copyQueue;
+        default: return m_graphicsQueue;
+        }
     }
 }

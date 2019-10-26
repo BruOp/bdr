@@ -57,15 +57,17 @@ namespace bdr
             m_allocatorPool.returnAllocator(fenceValue, allocator);
         }
 
-        inline uint64_t getNextFenceValue() {
+        inline uint64_t getNextFenceValue()
+        {
             return m_nextFenceValue;
         }
-        
-        inline uint64_t getCompletedFenceValue() const {
+
+        inline uint64_t getCompletedFenceValue() const
+        {
             uint64_t completedValue = m_pFence->GetCompletedValue();
             return m_lastCompletedValue > completedValue ? m_lastCompletedValue : completedValue;
         }
-        
+
         ID3D12CommandQueue* m_pQueue;
         const D3D12_COMMAND_LIST_TYPE m_type;
         ID3D12Fence* m_pFence;
@@ -85,23 +87,29 @@ namespace bdr
     {
     public:
         CommandQueueManager();
-        
+
         void init(ID3D12Device* pDevice);
+
         void createNewCommandList(
             D3D12_COMMAND_LIST_TYPE type,
             ID3D12GraphicsCommandList** list,
             ID3D12CommandAllocator** allocator);
+
+        bool isFenceComplete(const uint64_t fenceValue);
+
         void waitForIdle()
         {
             m_graphicsQueue.waitForIdle();
             m_computeQueue.waitForIdle();
             m_copyQueue.waitForIdle();
         }
-        
+
+        CommandQueue& getQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
+
         CommandQueue m_graphicsQueue;
         CommandQueue m_computeQueue;
         CommandQueue m_copyQueue;
-        
+
     private:
         ID3D12Device* m_pDevice;
 
